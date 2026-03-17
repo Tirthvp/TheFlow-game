@@ -1,120 +1,225 @@
+* {
+  box-sizing: border-box;
+}
+
 body {
-    font-family: Arial, sans-serif;
-    text-align: center;
-    background-color: #f4f4f4;
-    margin: 0;
-    padding: 0;
-    color: #1a1a1a;
+  font-family: Arial, sans-serif;
+  text-align: center;
+  background-color: #f3f3f3;
+  margin: 0;
+  color: #1c1c1c;
 }
 
 header {
-    background-color: #ffc907;
-    padding: 20px 15px;
+  background-color: #ffc907;
+  padding: 24px 16px;
 }
 
 header h1 {
-    margin: 0;
-    font-size: 2rem;
+  margin: 0;
+  font-size: 3rem;
 }
 
 header p {
-    margin: 8px 0 0;
-    font-size: 1rem;
+  margin: 12px 0 0;
+  font-size: 1.2rem;
+}
+
+main {
+  padding: 20px 12px 40px;
 }
 
 .game-info {
-    display: flex;
-    justify-content: center;
-    gap: 30px;
-    flex-wrap: wrap;
-    margin: 20px 10px;
-    font-size: 1.1rem;
-    font-weight: bold;
+  display: flex;
+  justify-content: center;
+  gap: 36px;
+  flex-wrap: wrap;
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin-bottom: 12px;
+}
+
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  font-size: 1rem;
+}
+
+.bad-legend {
+  color: #b22222;
+  font-weight: bold;
 }
 
 .game-container {
-    display: flex;
-    justify-content: center;
-    padding: 10px;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 24px;
 }
 
 #grid {
-    display: grid;
-    grid-template-columns: repeat(6, 60px);
-    grid-template-rows: repeat(6, 60px);
-    gap: 6px;
+  display: grid;
+  grid-template-columns: repeat(6, 72px);
+  grid-template-rows: repeat(6, 72px);
+  gap: 8px;
 }
 
 .tile {
-    background-color: #d9d9d9;
-    border: 2px solid #999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 24px;
-    transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
-    user-select: none;
+  width: 72px;
+  height: 72px;
+  background-color: #d9d9d9;
+  border: 3px solid #9a9a9a;
+  border-radius: 8px;
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
 .tile:hover {
-    background-color: #cfcfcf;
+  background-color: #cfcfcf;
 }
 
 .tile.bad {
-    background-color: #ff8a8a;
-    border-color: #d94b4b;
+  background-color: #f48b8b;
+  border-color: #d94c4c;
 }
 
-.tile.bad:hover {
-    background-color: #ff7272;
+.tile.source,
+.tile.tank {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  background-color: #dff1ff;
+}
+
+.tile.tank {
+  background-color: #e7f7e7;
+}
+
+.tile.connected {
+  box-shadow: 0 0 12px rgba(31, 111, 168, 0.65);
+}
+
+.pipe-line {
+  position: absolute;
+  background-color: #1f6fa8;
+  border-radius: 10px;
+}
+
+.pipe-center {
+  width: 18px;
+  height: 18px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.pipe-up,
+.pipe-down {
+  width: 12px;
+  height: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.pipe-up {
+  top: 6px;
+}
+
+.pipe-down {
+  bottom: 6px;
+}
+
+.pipe-left,
+.pipe-right {
+  height: 12px;
+  width: 28px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.pipe-left {
+  left: 6px;
+}
+
+.pipe-right {
+  right: 6px;
 }
 
 .controls {
-    margin-top: 20px;
+  margin-bottom: 16px;
 }
 
 button {
-    padding: 10px 16px;
-    margin: 6px;
-    font-size: 1rem;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    background-color: #1f6fa8;
-    color: white;
-    transition: background-color 0.2s ease, transform 0.2s ease;
+  padding: 12px 20px;
+  margin: 6px;
+  font-size: 1rem;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  background-color: #1f6fa8;
+  color: white;
+  transition: transform 0.2s ease, background-color 0.2s ease;
 }
 
 button:hover {
-    background-color: #155580;
-    transform: scale(1.03);
+  background-color: #185784;
+  transform: scale(1.03);
 }
 
 #message {
-    margin: 20px 10px;
-    font-size: 1.2rem;
-    font-weight: bold;
-    min-height: 30px;
+  min-height: 30px;
+  font-size: 1.15rem;
+  font-weight: bold;
 }
 
-@media (max-width: 600px) {
-    #grid {
-        grid-template-columns: repeat(6, 45px);
-        grid-template-rows: repeat(6, 45px);
-        gap: 4px;
-    }
+@media (max-width: 700px) {
+  header h1 {
+    font-size: 2.2rem;
+  }
 
-    .tile {
-        font-size: 18px;
-    }
+  header p {
+    font-size: 1rem;
+  }
 
-    .game-info {
-        gap: 15px;
-        font-size: 1rem;
-    }
+  #grid {
+    grid-template-columns: repeat(6, 52px);
+    grid-template-rows: repeat(6, 52px);
+    gap: 6px;
+  }
 
-    button {
-        width: 140px;
-    }
+  .tile {
+    width: 52px;
+    height: 52px;
+  }
+
+  .tile.source,
+  .tile.tank {
+    font-size: 1.4rem;
+  }
+
+  .pipe-center {
+    width: 14px;
+    height: 14px;
+  }
+
+  .pipe-up,
+  .pipe-down {
+    width: 10px;
+    height: 18px;
+  }
+
+  .pipe-left,
+  .pipe-right {
+    height: 10px;
+    width: 18px;
+  }
+
+  .game-info {
+    gap: 18px;
+    font-size: 1rem;
+  }
 }

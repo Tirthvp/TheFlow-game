@@ -7,134 +7,276 @@ const message = document.getElementById("message");
 const startBtn = document.getElementById("startBtn");
 const resetBtn = document.getElementById("resetBtn");
 
+const gridSize = 6;
+const startPos = { row: 0, col: 0 };
+const tankPos = { row: 5, col: 5 };
+
+let board = [];
 let score = 0;
 let moves = 0;
 let timeLeft = 30;
 let timer = null;
 let gameActive = false;
 
-const gridSize = 6;
-let tiles = [];
+const DIRS = {
+  up: { dr: -1, dc: 0, opposite: "down" },
+  right: { dr: 0, dc: 1, opposite: "left" },
+  down: { dr: 1, dc: 0, opposite: "up" },
+  left: { dr: 0, dc: -1, opposite: "right" }
+};
 
-// Create the game grid
-function createGrid() {
-    grid.innerHTML = "";
-    tiles = [];
+const pipeTypes = {
+  straight: [
+    ["up", "down"],
+    ["left", "right"]
+  ],
+  corner: [
+    ["up", "right"],
+    ["right", "down"],
+    ["down", "left"],
+    ["left", "up"]
+  ]
+};
 
-    for (let i = 0; i < gridSize * gridSize; i++) {
-        const tile = document.createElement("div");
-        tile.classList.add("tile");
-        tile.textContent = "⬜";
+function createBoard() {
+  board = [];
 
-        tile.dataset.rotation = 0;
+  for (let row = 0; row < gridSize; row++) {
+    const rowArray = [];
 
-        // 20% chance a tile becomes a bad tile
-        const isBad = Math.random() < 0.2;
-        tile.dataset.bad = isBad;
+    for (let col = 0; col < gridSize; col++) {
+      let tile;
 
-        if (isBad) {
-            tile.classList.add("bad");
+      if (row === startPos.row && col === startPos.col) {
+        tile = {
+          kind: "source",
+          connections: ["right"]
+        };
+      } else if (row === tankPos.row && col === tankPos.col) {
+        tile = {
+          kind: "tank",
+          connections: ["left"]
+        };
+      } else {
+        const isBad = Math.random() < 0.15;
+        const type = Math.random() < 0.5 ? "straight" : "corner";
+        const rotation = Math.floor(Math.random() * pipeTypes[type].length);
+
+        tile = {
+          kind: "pipe",
+          type,
+          rotation,
+          isBad
+        };
+      }
+
+      rowArray.push(tile);
+    }
+
+    board.push(rowArray);
+  }
+
+  renderBoard();
+}
+
+function getConnections(tile) {
+  if (tile.kind === "source" || tile.kind === "tank") {
+    return tile.connections;
+  }
+
+  return pipeTypes[tile.type][tile.rotation];
+}
+
+function renderBoard() {
+  grid.innerHTML = "";
+
+  for (let row = 0; row < gridSize; row++) {
+    for (let col = 0; col < gridSize; col++) {
+      const tile = board[row][col];
+      const tileEl = document.createElement("div");
+      tileEl.classList.add("tile");
+      tileEl.dataset.row = row;
+      tileEl.dataset.col = col;
+
+      if (tile.kind === "source") {
+        tileEl.classList.add("source");
+        tileEl.textContent = "🚰";
+      } else if (tile.kind === "tank") {
+        tileEl.classList.add("tank");
+        tileEl.textContent = "🛢️";
+      } else {
+        if (tile.isBad) {
+          tileEl.classList.add("bad");
         }
 
-        tile.addEventListener("click", () => rotateTile(tile));
+        drawPipe(tileEl, getConnections(tile));
+        tileEl.addEventListener("click", () => rotateTile(row, col));
+      }
 
-        grid.appendChild(tile);
-        tiles.push(tile);
+      grid.appendChild(tileEl);
     }
+  }
 }
 
-// Handle tile rotation and scoring
-function rotateTile(tile) {
-    if (!gameActive) return;
+function drawPipe(tileEl, connections) {
+  const center = document.createElement("div");
+  center.classList.add("pipe-line", "pipe-center");
+  tileEl.appendChild(center);
 
-    let rotation = parseInt(tile.dataset.rotation);
-    rotation = (rotation + 90) % 360;
-    tile.dataset.rotation = rotation;
-    tile.style.transform = `rotate(${rotation}deg)`;
-
-    moves++;
-    movesDisplay.textContent = moves;
-
-    if (tile.dataset.bad === "true") {
-        score -= 20;
-        message.textContent = "Contaminated pipe! -20 points";
-        tile.style.boxShadow = "0 0 12px rgba(255, 0, 0, 0.6)";
-    } else {
-        score += 10;
-        message.textContent = "Pipe rotated! +10 points";
-        tile.style.boxShadow = "0 0 12px rgba(0, 123, 255, 0.4)";
-    }
-
-    scoreDisplay.textContent = score;
-
-    setTimeout(() => {
-        tile.style.boxShadow = "none";
-    }, 250);
-
-    checkWin();
+  connections.forEach((dir) => {
+    const arm = document.createElement("div");
+    arm.classList.add("pipe-line", `pipe-${dir}`);
+    tileEl.appendChild(arm);
+  });
 }
 
-// Start the game
-function startGame() {
-    if (gameActive) return;
+function rotateTile(row, col) {
+  if (!gameActive) return;
 
-    gameActive = true;
-    message.textContent = "Game started! Connect the flow.";
-    startTimer();
-}
+  const tile = board[row][col];
+  if (tile.kind !== "pipe") return;
 
-// Start countdown timer
-function startTimer() {
+  tile.rotation = (tile.rotation + 1) % pipeTypes[tile.type].length;
+  moves++;
+  movesDisplay.textContent = moves;
+
+  if (tile.isBad) {
+    score -= 15;
+    message.textContent = "Bad tile rotated. -15 points";
+  } else {
+    score += 10;
+    message.textContent = "Pipe rotated. +10 points";
+  }
+
+  scoreDisplay.textContent = score;
+  renderBoard();
+
+  const connectedSet = findConnectedPath();
+  highlightConnectedTiles(connectedSet);
+
+  if (isWinningPath(connectedSet)) {
     clearInterval(timer);
-    timeLeft = 30;
-    timerDisplay.textContent = timeLeft;
-
-    timer = setInterval(() => {
-        timeLeft--;
-        timerDisplay.textContent = timeLeft;
-
-        if (timeLeft <= 0) {
-            clearInterval(timer);
-            gameActive = false;
-            message.textContent = "Time's up! You lost.";
-        }
-    }, 1000);
-}
-
-// Reset the game
-function resetGame() {
-    clearInterval(timer);
-
-    score = 0;
-    moves = 0;
-    timeLeft = 30;
     gameActive = false;
-
+    score += 50 + timeLeft;
     scoreDisplay.textContent = score;
-    movesDisplay.textContent = moves;
-    timerDisplay.textContent = timeLeft;
-    message.textContent = "Game reset.";
-
-    createGrid();
+    message.textContent = "You connected the water supply!";
+    launchConfetti();
+  }
 }
 
-// Temporary prototype win condition
-function checkWin() {
-    if (moves >= 10) {
-        clearInterval(timer);
-        gameActive = false;
-        message.textContent = "You connected the water!";
+function startGame() {
+  if (gameActive) return;
 
-        confetti({
-            particleCount: 150,
-            spread: 70,
-            origin: { y: 0.6 }
-        });
+  gameActive = true;
+  message.textContent = "Game started. Build the path!";
+  startTimer();
+
+  const connectedSet = findConnectedPath();
+  highlightConnectedTiles(connectedSet);
+}
+
+function startTimer() {
+  clearInterval(timer);
+  timeLeft = 30;
+  timerDisplay.textContent = timeLeft;
+
+  timer = setInterval(() => {
+    timeLeft--;
+    timerDisplay.textContent = timeLeft;
+
+    if (timeLeft <= 0) {
+      clearInterval(timer);
+      gameActive = false;
+      message.textContent = "Time's up! Try again.";
     }
+  }, 1000);
+}
+
+function resetGame() {
+  clearInterval(timer);
+  score = 0;
+  moves = 0;
+  timeLeft = 30;
+  gameActive = false;
+
+  scoreDisplay.textContent = score;
+  movesDisplay.textContent = moves;
+  timerDisplay.textContent = timeLeft;
+  message.textContent = "Game reset.";
+
+  createBoard();
+}
+
+function findConnectedPath() {
+  const visited = new Set();
+  const queue = [{ row: startPos.row, col: startPos.col }];
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    const key = `${current.row}-${current.col}`;
+
+    if (visited.has(key)) continue;
+    visited.add(key);
+
+    const currentTile = board[current.row][current.col];
+    const currentConnections = getConnections(currentTile);
+
+    currentConnections.forEach((dir) => {
+      const nextRow = current.row + DIRS[dir].dr;
+      const nextCol = current.col + DIRS[dir].dc;
+
+      if (
+        nextRow < 0 ||
+        nextRow >= gridSize ||
+        nextCol < 0 ||
+        nextCol >= gridSize
+      ) {
+        return;
+      }
+
+      const nextTile = board[nextRow][nextCol];
+      const nextConnections = getConnections(nextTile);
+
+      if (nextConnections.includes(DIRS[dir].opposite)) {
+        queue.push({ row: nextRow, col: nextCol });
+      }
+    });
+  }
+
+  return visited;
+}
+
+function isWinningPath(connectedSet) {
+  return connectedSet.has(`${tankPos.row}-${tankPos.col}`);
+}
+
+function highlightConnectedTiles(connectedSet) {
+  const tileElements = document.querySelectorAll(".tile");
+
+  tileElements.forEach((tileEl) => {
+    const row = tileEl.dataset.row;
+    const col = tileEl.dataset.col;
+
+    if (row !== undefined && col !== undefined) {
+      const key = `${row}-${col}`;
+      if (connectedSet.has(key)) {
+        tileEl.classList.add("connected");
+      } else {
+        tileEl.classList.remove("connected");
+      }
+    }
+  });
+}
+
+function launchConfetti() {
+  confetti({
+    particleCount: 160,
+    spread: 80,
+    origin: { y: 0.6 }
+  });
 }
 
 startBtn.addEventListener("click", startGame);
 resetBtn.addEventListener("click", resetGame);
 
-// Initialize game board on page load
-createGrid();
+createBoard();
