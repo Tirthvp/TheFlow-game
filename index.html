@@ -8,33 +8,29 @@
 </head>
 <body>
 
-    <!-- Header -->
     <header>
         <h1>The Flow Game</h1>
         <p>Connect the water source to the tank before time runs out</p>
     </header>
 
-    <!-- Game Info -->
     <section class="game-info">
         <div>Score: <span id="score">0</span></div>
         <div>Moves: <span id="moves">0</span></div>
         <div>Time: <span id="timer">30</span></div>
     </section>
 
-    <!-- Game Board -->
     <section class="game-container">
         <div id="grid"></div>
     </section>
 
-    <!-- Controls -->
     <section class="controls">
         <button id="startBtn">Start Game</button>
-        <button id="resetBtn">Reset</button>
+        <button id="resetBtn">Reset Game</button>
     </section>
 
-    <!-- Message -->
     <div id="message"></div>
 
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

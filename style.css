@@ -4,45 +4,70 @@ body {
     background-color: #f4f4f4;
     margin: 0;
     padding: 0;
+    color: #1a1a1a;
 }
 
 header {
-    background-color: #FFC907; /* charity: water yellow */
-    padding: 15px;
+    background-color: #ffc907;
+    padding: 20px 15px;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 2rem;
+}
+
+header p {
+    margin: 8px 0 0;
+    font-size: 1rem;
 }
 
 .game-info {
     display: flex;
-    justify-content: space-around;
-    margin: 15px;
-    font-size: 18px;
+    justify-content: center;
+    gap: 30px;
+    flex-wrap: wrap;
+    margin: 20px 10px;
+    font-size: 1.1rem;
+    font-weight: bold;
 }
 
 .game-container {
     display: flex;
     justify-content: center;
+    padding: 10px;
 }
 
 #grid {
     display: grid;
     grid-template-columns: repeat(6, 60px);
     grid-template-rows: repeat(6, 60px);
-    gap: 5px;
+    gap: 6px;
 }
 
 .tile {
-    background-color: #ddd;
+    background-color: #d9d9d9;
     border: 2px solid #999;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    font-size: 20px;
-    transition: transform 0.2s;
+    font-size: 24px;
+    transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+    user-select: none;
 }
 
 .tile:hover {
-    background-color: #ccc;
+    background-color: #cfcfcf;
+}
+
+.tile.bad {
+    background-color: #ff8a8a;
+    border-color: #d94b4b;
+}
+
+.tile.bad:hover {
+    background-color: #ff7272;
 }
 
 .controls {
@@ -50,14 +75,46 @@ header {
 }
 
 button {
-    padding: 10px 15px;
-    margin: 5px;
-    font-size: 16px;
+    padding: 10px 16px;
+    margin: 6px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 6px;
     cursor: pointer;
+    background-color: #1f6fa8;
+    color: white;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+button:hover {
+    background-color: #155580;
+    transform: scale(1.03);
 }
 
 #message {
-    margin-top: 15px;
-    font-size: 20px;
+    margin: 20px 10px;
+    font-size: 1.2rem;
     font-weight: bold;
+    min-height: 30px;
+}
+
+@media (max-width: 600px) {
+    #grid {
+        grid-template-columns: repeat(6, 45px);
+        grid-template-rows: repeat(6, 45px);
+        gap: 4px;
+    }
+
+    .tile {
+        font-size: 18px;
+    }
+
+    .game-info {
+        gap: 15px;
+        font-size: 1rem;
+    }
+
+    button {
+        width: 140px;
+    }
 }
