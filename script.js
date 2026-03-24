@@ -17,118 +17,229 @@ const tankPos = { row: 5, col: 5 };
 let board = [];
 let score = 0;
 let moves = 0;
-let timeLeft = 40;
+let timeLeft = 45;
 let timer = null;
 let gameActive = false;
 let currentDifficulty = "easy";
 let milestonesHit = [];
+let hasWon = false;
 
 const difficultySettings = {
   easy: {
-    time: 40,
-    badChance: 0.1,
-    goodPoints: 12,
-    badPenalty: 10,
-    winBonus: 60,
-    description: "Easy mode: more time and fewer bad tiles."
+    time: 60,
+    goodPoints: 10,
+    winBonus: 80,
+    description: "Easy mode: 60 seconds, simple L-shaped path."
   },
   normal: {
-    time: 30,
-    badChance: 0.15,
+    time: 45,
     goodPoints: 10,
-    badPenalty: 15,
-    winBonus: 50,
-    description: "Normal mode: balanced time and tile penalties."
+    winBonus: 55,
+    description: "Normal mode: 45 seconds, longer winding path."
   },
   hard: {
-    time: 20,
-    badChance: 0.22,
-    goodPoints: 8,
-    badPenalty: 20,
+    time: 30,
+    goodPoints: 10,
     winBonus: 40,
-    description: "Hard mode: less time and more bad tiles."
+    description: "Hard mode: 30 seconds, full snake path across every row."
   }
 };
 
 const milestoneList = [
-  { score: 20, text: "Nice start! Clean water is on the way." },
-  { score: 50, text: "Halfway there! Keep the flow moving." },
-  { score: 80, text: "Great job! You are building real momentum." },
-  { score: 120, text: "Amazing work! The system is almost complete." }
+  { score: 20,  text: "Nice start! Clean water is on the way."       },
+  { score: 50,  text: "Halfway there! Keep the flow moving."          },
+  { score: 80,  text: "Great job! You are building real momentum."    },
+  { score: 120, text: "Amazing work! The system is almost complete."  }
 ];
 
 const DIRS = {
-  up: { dr: -1, dc: 0, opposite: "down" },
-  right: { dr: 0, dc: 1, opposite: "left" },
-  down: { dr: 1, dc: 0, opposite: "up" },
-  left: { dr: 0, dc: -1, opposite: "right" }
+  up:    { dr: -1, dc:  0, opposite: "down"  },
+  right: { dr:  0, dc:  1, opposite: "left"  },
+  down:  { dr:  1, dc:  0, opposite: "up"    },
+  left:  { dr:  0, dc: -1, opposite: "right" }
 };
 
 const pipeTypes = {
   straight: [
-    ["up", "down"],
-    ["left", "right"]
+    ["up", "down"],    // rotation 0
+    ["left", "right"]  // rotation 1
   ],
   corner: [
-    ["up", "right"],
-    ["right", "down"],
-    ["down", "left"],
-    ["left", "up"]
+    ["up", "right"],   // rotation 0
+    ["right", "down"], // rotation 1
+    ["down", "left"],  // rotation 2
+    ["left", "up"]     // rotation 3
   ]
 };
 
-const sounds = {
-  click: new Audio("assets/images/icons/sounds/click.mp3"),
-  bad: new Audio("assets/images/icons/sounds/bad.mp3"),
-  win: new Audio("assets/images/icons/sounds/win.mp3"),
-  button: new Audio("assets/images/icons/sounds/button.mp3"),
-  lose: new Audio("assets/images/icons/sounds/lose.mp3")
+// ─── PRESET PATTERNS ──────────────────────────────────────────────────────────
+// Each cell: { type, rotation } — the SOLVED rotation.
+// createBoard() scrambles it so the player starts with a wrong orientation.
+// Cells marked with type "source" or "tank" are handled separately.
+//
+// F = off-path filler tile (straight L-R), will also be scrambled.
+
+const F = { type: "straight", rotation: 1 };
+
+const presetPatterns = {
+
+  // ── EASY ────────────────────────────────────────────────────────────────
+  // Path: (0,0)→→→→→(0,5)↓↓↓↓↓(5,5)
+  // A simple L: go right across row 0, then down col 5.
+  easy: [
+    [
+      { type: "source"                    }, // (0,0)
+      { type: "straight", rotation: 1    }, // (0,1) ←→
+      { type: "straight", rotation: 1    }, // (0,2) ←→
+      { type: "straight", rotation: 1    }, // (0,3) ←→
+      { type: "straight", rotation: 1    }, // (0,4) ←→
+      { type: "corner",   rotation: 1    }, // (0,5) →↓
+    ],
+    [
+      F, F, F, F, F,
+      { type: "straight", rotation: 0    }, // (1,5) ↑↓
+    ],
+    [
+      F, F, F, F, F,
+      { type: "straight", rotation: 0    }, // (2,5) ↑↓
+    ],
+    [
+      F, F, F, F, F,
+      { type: "straight", rotation: 0    }, // (3,5) ↑↓
+    ],
+    [
+      F, F, F, F, F,
+      { type: "straight", rotation: 0    }, // (4,5) ↑↓
+    ],
+    [
+      F, F, F, F, F,
+      { type: "tank"                     }, // (5,5)
+    ],
+  ],
+
+  // ── NORMAL ──────────────────────────────────────────────────────────────
+  // Path: (0,0)→(0,1)→(0,2)→(0,3)↓(1,3)↓(2,3)→(2,4)→(2,5)↓(3,5)↓(4,5)↓(5,5)
+  // Two segments with a mid-board turn.
+  normal: [
+    [
+      { type: "source"                    }, // (0,0)
+      { type: "straight", rotation: 1    }, // (0,1) ←→
+      { type: "straight", rotation: 1    }, // (0,2) ←→
+      { type: "corner",   rotation: 1    }, // (0,3) →↓
+      F,
+      F,
+    ],
+    [
+      F, F, F,
+      { type: "straight", rotation: 0    }, // (1,3) ↑↓
+      F,
+      F,
+    ],
+    [
+      F, F, F,
+      { type: "corner",   rotation: 0    }, // (2,3) ↑→
+      { type: "straight", rotation: 1    }, // (2,4) ←→
+      { type: "corner",   rotation: 1    }, // (2,5) →↓
+    ],
+    [
+      F, F, F, F, F,
+      { type: "straight", rotation: 0    }, // (3,5) ↑↓
+    ],
+    [
+      F, F, F, F, F,
+      { type: "straight", rotation: 0    }, // (4,5) ↑↓
+    ],
+    [
+      F, F, F, F, F,
+      { type: "tank"                     }, // (5,5)
+    ],
+  ],
+
+  // ── HARD ────────────────────────────────────────────────────────────────
+  // Full snake: zigzags right→down→left→down→right→down→left→down→right→tank
+  // Row 0: → → → → → ↓
+  // Row 1: ↓ ← ← ← ← ↓  (turns at both ends)
+  // Row 2: ↓ → → → → ↓
+  // Row 3: ↓ ← ← ← ← ↓
+  // Row 4: ↓ → → → → ↓
+  // Row 5: (filler) ... tank
+  hard: [
+    [
+      { type: "source"                    }, // (0,0)
+      { type: "straight", rotation: 1    }, // (0,1) ←→
+      { type: "straight", rotation: 1    }, // (0,2) ←→
+      { type: "straight", rotation: 1    }, // (0,3) ←→
+      { type: "straight", rotation: 1    }, // (0,4) ←→
+      { type: "corner",   rotation: 1    }, // (0,5) →↓
+    ],
+    [
+      { type: "corner",   rotation: 2    }, // (1,0) ↓←
+      { type: "straight", rotation: 1    }, // (1,1) ←→
+      { type: "straight", rotation: 1    }, // (1,2) ←→
+      { type: "straight", rotation: 1    }, // (1,3) ←→
+      { type: "straight", rotation: 1    }, // (1,4) ←→
+      { type: "corner",   rotation: 2    }, // (1,5) ↓←
+    ],
+    [
+      { type: "corner",   rotation: 1    }, // (2,0) →↓  (enters from above, exits right)
+      { type: "straight", rotation: 1    }, // (2,1) ←→
+      { type: "straight", rotation: 1    }, // (2,2) ←→
+      { type: "straight", rotation: 1    }, // (2,3) ←→
+      { type: "straight", rotation: 1    }, // (2,4) ←→
+      { type: "corner",   rotation: 1    }, // (2,5) →↓
+    ],
+    [
+      { type: "corner",   rotation: 2    }, // (3,0) ↓←
+      { type: "straight", rotation: 1    }, // (3,1) ←→
+      { type: "straight", rotation: 1    }, // (3,2) ←→
+      { type: "straight", rotation: 1    }, // (3,3) ←→
+      { type: "straight", rotation: 1    }, // (3,4) ←→
+      { type: "corner",   rotation: 2    }, // (3,5) ↓←
+    ],
+    [
+      { type: "corner",   rotation: 1    }, // (4,0) →↓
+      { type: "straight", rotation: 1    }, // (4,1) ←→
+      { type: "straight", rotation: 1    }, // (4,2) ←→
+      { type: "straight", rotation: 1    }, // (4,3) ←→
+      { type: "straight", rotation: 1    }, // (4,4) ←→
+      { type: "corner",   rotation: 1    }, // (4,5) →↓
+    ],
+    [
+      F, F, F, F, F,
+      { type: "tank"                     }, // (5,5)
+    ],
+  ],
 };
 
-Object.values(sounds).forEach((sound) => {
-  sound.volume = 0.5;
-});
-
-function playSound(name) {
-  const sound = sounds[name];
-  if (!sound) return;
-
-  sound.currentTime = 0;
-  sound.play().catch(() => {
-    // Browser may block autoplay until user interacts. Humanity loves browser policies.
-  });
-}
+// ─── BOARD CREATION ───────────────────────────────────────────────────────────
 
 function createBoard() {
   board = [];
-  const settings = difficultySettings[currentDifficulty];
+  const pattern = presetPatterns[currentDifficulty];
 
   for (let row = 0; row < gridSize; row++) {
     const rowArray = [];
 
     for (let col = 0; col < gridSize; col++) {
+      const cell = pattern[row][col];
       let tile;
 
       if (row === startPos.row && col === startPos.col) {
-        tile = {
-          kind: "source",
-          connections: ["right"]
-        };
+        tile = { kind: "source", connections: ["right"] };
+
       } else if (row === tankPos.row && col === tankPos.col) {
-        tile = {
-          kind: "tank",
-          connections: ["left"]
-        };
+        tile = { kind: "tank", connections: ["left", "up", "right", "down"] };
+
       } else {
-        const isBad = Math.random() < settings.badChance;
-        const type = Math.random() < 0.5 ? "straight" : "corner";
-        const rotation = Math.floor(Math.random() * pipeTypes[type].length);
+        const maxRot = pipeTypes[cell.type].length;
+        // Start scrambled: guaranteed not the solved rotation
+        let scrambled = (cell.rotation + 1 + Math.floor(Math.random() * (maxRot - 1))) % maxRot;
 
         tile = {
           kind: "pipe",
-          type,
-          rotation,
-          isBad
+          type: cell.type,
+          rotation: scrambled,
+          solvedRotation: cell.rotation
         };
       }
 
@@ -139,14 +250,12 @@ function createBoard() {
   }
 
   renderBoard();
-  message.textContent = "Press Start to begin. Connect the water!";
 }
 
-function getConnections(tile) {
-  if (tile.kind === "source" || tile.kind === "tank") {
-    return tile.connections;
-  }
+// ─── CONNECTIONS & RENDERING ──────────────────────────────────────────────────
 
+function getConnections(tile) {
+  if (tile.kind === "source" || tile.kind === "tank") return tile.connections;
   return pipeTypes[tile.type][tile.rotation];
 }
 
@@ -168,10 +277,6 @@ function renderBoard() {
         tileEl.classList.add("tank");
         tileEl.textContent = "🛢️";
       } else {
-        if (tile.isBad) {
-          tileEl.classList.add("bad");
-        }
-
         drawPipe(tileEl, getConnections(tile));
         tileEl.addEventListener("click", () => rotateTile(row, col));
       }
@@ -193,24 +298,22 @@ function drawPipe(tileEl, connections) {
   });
 }
 
+// ─── TILE INTERACTION ─────────────────────────────────────────────────────────
+
 function showTileFeedback(row, col, text, type) {
-  const selector = `.tile[data-row="${row}"][data-col="${col}"]`;
-  const tileEl = document.querySelector(selector);
+  const tileEl = document.querySelector(`.tile[data-row="${row}"][data-col="${col}"]`);
   if (!tileEl) return;
 
   const popup = document.createElement("div");
   popup.classList.add("feedback-popup", type);
   popup.textContent = text;
-
   tileEl.appendChild(popup);
 
-  setTimeout(() => {
-    popup.remove();
-  }, 800);
+  setTimeout(() => popup.remove(), 800);
 }
 
 function rotateTile(row, col) {
-  if (!gameActive) return;
+  if (!gameActive || hasWon) return;
 
   const tile = board[row][col];
   if (tile.kind !== "pipe") return;
@@ -219,59 +322,66 @@ function rotateTile(row, col) {
   moves++;
   movesDisplay.textContent = moves;
 
-  const settings = difficultySettings[currentDifficulty];
-
-  if (tile.isBad) {
-    score -= settings.badPenalty;
-    message.textContent = `Bad tile rotated. -${settings.badPenalty} points`;
-    showTileFeedback(row, col, `-${settings.badPenalty}`, "bad-text");
-    playSound("bad");
-  } else {
-    score += settings.goodPoints;
-    message.textContent = `Pipe rotated. +${settings.goodPoints} points`;
-    showTileFeedback(row, col, `+${settings.goodPoints}`, "good");
-    playSound("click");
-  }
+  const { goodPoints } = difficultySettings[currentDifficulty];
+  score += goodPoints;
+  message.textContent = `Pipe rotated. +${goodPoints} points`;
+  showTileFeedback(row, col, `+${goodPoints}`, "good");
+  playSound("click");
 
   scoreDisplay.textContent = score;
-  renderBoard();
-
-  const connectedSet = findConnectedPath();
-  highlightConnectedTiles(connectedSet);
   checkMilestones();
-
-  if (isWinningPath(connectedSet)) {
-    clearInterval(timer);
-    gameActive = false;
-    score += settings.winBonus + timeLeft;
-    scoreDisplay.textContent = score;
-    message.textContent = "You connected the water supply!";
-    milestoneMessage.textContent = "Success! Clean water reached the tank.";
-    launchConfetti();
-    playSound("win");
-  }
+  renderBoard();
+  checkForWin();
 }
 
-function startGame() {
-  if (gameActive) return;
+// ─── WIN LOGIC ────────────────────────────────────────────────────────────────
 
+function handleWin() {
+  if (hasWon) return;
+
+  clearInterval(timer);
+  timer = null;
+  gameActive = false;
+  hasWon = true;
+
+  const { winBonus } = difficultySettings[currentDifficulty];
+  score += winBonus + timeLeft;
+  scoreDisplay.textContent = score;
+
+  message.textContent = "You connected the water supply!";
+  milestoneMessage.textContent = "Success! Clean water reached the tank.";
+
+  const overlay = document.getElementById("winOverlay");
+  const details = document.getElementById("winDetails");
+  details.textContent = `Final score: ${score} pts — Completed in ${moves} moves with ${timeLeft}s to spare!`;
+  overlay.classList.remove("hidden");
+
+  launchConfetti();
+  playSound("win");
+}
+
+// ─── GAME FLOW ────────────────────────────────────────────────────────────────
+
+function startGame() {
+  clearInterval(timer);
   playSound("button");
-  gameActive = true;
-  message.textContent = "Game started! Connect the pipes.";
-  milestoneMessage.textContent = "Build the path before time runs out.";
-  milestonesHit = [];
+  document.getElementById("winOverlay").classList.add("hidden");
+
   score = 0;
   moves = 0;
+  hasWon = false;
+  milestonesHit = [];
+  gameActive = true;
 
   scoreDisplay.textContent = score;
   movesDisplay.textContent = moves;
 
   createBoard();
   message.textContent = "Game started! Connect the pipes.";
-  startTimer();
+  milestoneMessage.textContent = "Build the path before time runs out.";
 
-  const connectedSet = findConnectedPath();
-  highlightConnectedTiles(connectedSet);
+  startTimer();
+  highlightConnectedTiles(findConnectedPath());
 }
 
 function startTimer() {
@@ -285,6 +395,7 @@ function startTimer() {
 
     if (timeLeft <= 0) {
       clearInterval(timer);
+      timer = null;
       gameActive = false;
       message.textContent = "Time's up! Try again.";
       milestoneMessage.textContent = "You ran out of time. Reset and try again.";
@@ -296,20 +407,45 @@ function startTimer() {
 function resetGame() {
   clearInterval(timer);
   playSound("button");
+  document.getElementById("winOverlay").classList.add("hidden");
 
   score = 0;
   moves = 0;
-  timeLeft = difficultySettings[currentDifficulty].time;
-  gameActive = false;
+  hasWon = false;
   milestonesHit = [];
+  gameActive = true;
+  timeLeft = difficultySettings[currentDifficulty].time;
 
   scoreDisplay.textContent = score;
   movesDisplay.textContent = moves;
   timerDisplay.textContent = timeLeft;
-  milestoneMessage.textContent = "Game reset. Choose your path again.";
+  milestoneMessage.textContent = "New board loaded. Start building the path.";
   message.textContent = "Game reset.";
 
   createBoard();
+  startTimer();
+  highlightConnectedTiles(findConnectedPath());
+}
+
+// ─── PATH FINDING ─────────────────────────────────────────────────────────────
+
+function canTilesConnect(row1, col1, row2, col2) {
+  if (
+    row1 < 0 || row1 >= gridSize || col1 < 0 || col1 >= gridSize ||
+    row2 < 0 || row2 >= gridSize || col2 < 0 || col2 >= gridSize
+  ) return false;
+
+  const connections1 = getConnections(board[row1][col1]);
+  const connections2 = getConnections(board[row2][col2]);
+
+  for (const dir of connections1) {
+    const nr = row1 + DIRS[dir].dr;
+    const nc = col1 + DIRS[dir].dc;
+    if (nr === row2 && nc === col2) {
+      return connections2.includes(DIRS[dir].opposite);
+    }
+  }
+  return false;
 }
 
 function findConnectedPath() {
@@ -319,31 +455,15 @@ function findConnectedPath() {
   while (queue.length > 0) {
     const current = queue.shift();
     const key = `${current.row}-${current.col}`;
-
     if (visited.has(key)) continue;
     visited.add(key);
 
-    const currentTile = board[current.row][current.col];
-    const currentConnections = getConnections(currentTile);
-
-    currentConnections.forEach((dir) => {
-      const nextRow = current.row + DIRS[dir].dr;
-      const nextCol = current.col + DIRS[dir].dc;
-
-      if (
-        nextRow < 0 ||
-        nextRow >= gridSize ||
-        nextCol < 0 ||
-        nextCol >= gridSize
-      ) {
-        return;
-      }
-
-      const nextTile = board[nextRow][nextCol];
-      const nextConnections = getConnections(nextTile);
-
-      if (nextConnections.includes(DIRS[dir].opposite)) {
-        queue.push({ row: nextRow, col: nextCol });
+    const connections = getConnections(board[current.row][current.col]);
+    connections.forEach((dir) => {
+      const nr = current.row + DIRS[dir].dr;
+      const nc = current.col + DIRS[dir].dc;
+      if (canTilesConnect(current.row, current.col, nr, nc)) {
+        queue.push({ row: nr, col: nc });
       }
     });
   }
@@ -351,27 +471,40 @@ function findConnectedPath() {
   return visited;
 }
 
-function isWinningPath(connectedSet) {
-  return connectedSet.has(`${tankPos.row}-${tankPos.col}`);
+function hasWinningConnection(connectedSet) {
+  const neighbors = [
+    { row: tankPos.row,     col: tankPos.col - 1, requiredDir: "right" },
+    { row: tankPos.row - 1, col: tankPos.col,     requiredDir: "down"  },
+    { row: tankPos.row,     col: tankPos.col + 1, requiredDir: "left"  },
+    { row: tankPos.row + 1, col: tankPos.col,     requiredDir: "up"    }
+  ];
+
+  for (const { row, col, requiredDir } of neighbors) {
+    if (row < 0 || row >= gridSize || col < 0 || col >= gridSize) continue;
+    if (!connectedSet.has(`${row}-${col}`)) continue;
+
+    const tile = board[row][col];
+    if (!tile || tile.kind === "source" || tile.kind === "tank") continue;
+    if (getConnections(tile).includes(requiredDir)) return true;
+  }
+
+  return false;
 }
 
 function highlightConnectedTiles(connectedSet) {
-  const tileElements = document.querySelectorAll(".tile");
-
-  tileElements.forEach((tileEl) => {
-    const row = tileEl.dataset.row;
-    const col = tileEl.dataset.col;
-
-    if (row !== undefined && col !== undefined) {
-      const key = `${row}-${col}`;
-      if (connectedSet.has(key)) {
-        tileEl.classList.add("connected");
-      } else {
-        tileEl.classList.remove("connected");
-      }
-    }
+  document.querySelectorAll(".tile").forEach((tileEl) => {
+    const key = `${tileEl.dataset.row}-${tileEl.dataset.col}`;
+    tileEl.classList.toggle("connected", connectedSet.has(key));
   });
 }
+
+function checkForWin() {
+  const connectedSet = findConnectedPath();
+  highlightConnectedTiles(connectedSet);
+  if (hasWinningConnection(connectedSet)) handleWin();
+}
+
+// ─── MILESTONES & CONFETTI ────────────────────────────────────────────────────
 
 function checkMilestones() {
   for (const milestone of milestoneList) {
@@ -383,12 +516,28 @@ function checkMilestones() {
 }
 
 function launchConfetti() {
-  confetti({
-    particleCount: 180,
-    spread: 85,
-    origin: { y: 0.6 }
-  });
+  confetti({ particleCount: 180, spread: 85, origin: { y: 0.6 } });
 }
+
+// ─── SOUNDS ───────────────────────────────────────────────────────────────────
+
+const sounds = {
+  click:  new Audio("assets/images/icons/sounds/click.mp3"),
+  win:    new Audio("assets/images/icons/sounds/win.mp3"),
+  button: new Audio("assets/images/icons/sounds/button.mp3"),
+  lose:   new Audio("assets/images/icons/sounds/lose.mp3")
+};
+
+Object.values(sounds).forEach((s) => { s.volume = 0.5; });
+
+function playSound(name) {
+  const s = sounds[name];
+  if (!s) return;
+  s.currentTime = 0;
+  s.play().catch(() => {});
+}
+
+// ─── DIFFICULTY ───────────────────────────────────────────────────────────────
 
 function setDifficulty(level) {
   currentDifficulty = level;
@@ -403,13 +552,19 @@ function setDifficulty(level) {
 }
 
 difficultyButtons.forEach((btn) => {
-  btn.addEventListener("click", () => {
-    setDifficulty(btn.dataset.difficulty);
-  });
+  btn.addEventListener("click", () => setDifficulty(btn.dataset.difficulty));
 });
 
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+
+document.getElementById("winPlayAgain").addEventListener("click", () => {
+  document.getElementById("winOverlay").classList.add("hidden");
+  startGame();
+});
+
+startBtn.textContent = "New Game";
 startBtn.addEventListener("click", startGame);
 resetBtn.addEventListener("click", resetGame);
 
 timerDisplay.textContent = difficultySettings[currentDifficulty].time;
-createBoard();
+startGame();

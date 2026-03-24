@@ -98,9 +98,6 @@ main {
   font-weight: 600;
 }
 
-.bad-legend {
-  color: #b22222;
-}
 
 .milestone-section {
   margin-bottom: 18px;
@@ -144,11 +141,6 @@ main {
 
 .tile:hover {
   background-color: #cfcfcf;
-}
-
-.tile.bad {
-  background-color: #f48b8b;
-  border-color: #d94c4c;
 }
 
 .tile.source,
@@ -305,6 +297,75 @@ footer p {
   opacity: 0.92;
 }
 
+/* ── WIN OVERLAY ── */
+.win-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.win-overlay.hidden {
+  display: none;
+}
+
+.win-box {
+  background: white;
+  border-radius: 20px;
+  padding: 44px 52px;
+  text-align: center;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  max-width: 400px;
+  width: 90%;
+  animation: popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.win-emoji {
+  font-size: 4rem;
+  margin-bottom: 12px;
+}
+
+.win-box h2 {
+  font-size: 2rem;
+  margin: 0 0 12px;
+  color: #1f6fa8;
+  font-weight: 800;
+}
+
+.win-box p {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 28px;
+  color: #444;
+  line-height: 1.5;
+}
+
+#winPlayAgain {
+  background-color: #ffc907;
+  color: #1c1c1c;
+  font-size: 1.1rem;
+  padding: 14px 32px;
+  border-radius: 12px;
+}
+
+#winPlayAgain:hover {
+  background-color: #e6b400;
+}
+
+@keyframes popIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 @keyframes floatUp {
   0% {
     opacity: 0;
@@ -369,5 +430,13 @@ footer p {
   .stat-card {
     min-width: 100px;
     padding: 10px 12px;
+  }
+
+  .win-box {
+    padding: 32px 24px;
+  }
+
+  .win-box h2 {
+    font-size: 1.6rem;
   }
 }
