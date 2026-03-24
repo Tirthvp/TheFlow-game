@@ -4,7 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>The Flow Game</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="style.css?v=4" />
 </head>
 <body>
   <header>
@@ -13,16 +19,30 @@
   </header>
 
   <main>
+    <section class="difficulty-section">
+      <h2>Choose Difficulty</h2>
+      <div class="difficulty-buttons">
+        <button class="difficulty-btn active" data-difficulty="easy">Easy</button>
+        <button class="difficulty-btn" data-difficulty="normal">Normal</button>
+        <button class="difficulty-btn" data-difficulty="hard">Hard</button>
+      </div>
+      <p id="difficultyDescription">Easy mode: more time and fewer bad tiles.</p>
+    </section>
+
     <section class="game-info">
-      <div>Score: <span id="score">0</span></div>
-      <div>Moves: <span id="moves">0</span></div>
-      <div>Time: <span id="timer">30</span></div>
+      <div class="stat-card">Score: <span id="score">0</span></div>
+      <div class="stat-card">Moves: <span id="moves">0</span></div>
+      <div class="stat-card">Time: <span id="timer">40</span></div>
     </section>
 
     <section class="legend">
       <span>🚰 Source</span>
       <span>🛢️ Tank</span>
       <span class="bad-legend">⚠ Bad Tile</span>
+    </section>
+
+    <section class="milestone-section">
+      <div id="milestoneMessage">Start the game and build the path.</div>
     </section>
 
     <section class="game-container">
@@ -34,10 +54,21 @@
       <button id="resetBtn">Reset Game</button>
     </section>
 
-    <div id="message"></div>
+    <div id="message">Press Start to begin. Connect the water!</div>
   </main>
 
+  <footer>
+    <h3>Learn More About charity: water</h3>
+    <p>
+      This game is inspired by charity: water’s mission to bring clean and safe drinking water to people around the world.
+    </p>
+    <div class="footer-links">
+      <a href="https://www.charitywater.org/" target="_blank" rel="noopener noreferrer">Visit charity: water</a>
+      <a href="https://www.charitywater.org/donate" target="_blank" rel="noopener noreferrer">Donate to charity: water</a>
+    </div>
+  </footer>
+
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-  <script src="script.js"></script>
+  <script src="script.js?v=4"></script>
 </body>
 </html>
